@@ -35,7 +35,7 @@ variable "postgres_password" {
 variable "subnet_ids" {
   description = "List of subnet IDs for ElastiCache Redis"
   type        = list(string)
-  default = [  ]
+  default = [ ]
 }
 
 
