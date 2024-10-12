@@ -3,7 +3,7 @@ resource "aws_db_instance" "postgres" {
   storage_type           = "gp2"
   engine                 = "postgres"
   engine_version         = "15.7"
-  instance_class         = "db.t2.micro"
+  instance_class         = "db.t3.micro"
   identifier                   = "appdb"
   username               = "postgres"
   password               = var.db_password
