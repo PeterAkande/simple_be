@@ -4,12 +4,13 @@ resource "aws_db_instance" "postgres" {
   engine                 = "postgres"
   engine_version         = "15.7"
   instance_class         = "db.t3.micro"
-  identifier                   = "appdb"
+  identifier             = "appdb"
   username               = "postgres"
   password               = var.db_password
   publicly_accessible    = true
   vpc_security_group_ids = [aws_security_group.ecs_sg.id]
   skip_final_snapshot    = true
+
 }
 
 resource "aws_elasticache_cluster" "redis" {
@@ -19,4 +20,6 @@ resource "aws_elasticache_cluster" "redis" {
   num_cache_nodes      = 1
   parameter_group_name = "default.redis7"
   port                 = 6379
+  security_group_ids   = [aws_security_group.ecs_sg.id]
+
 }
