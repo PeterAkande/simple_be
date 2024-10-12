@@ -95,7 +95,7 @@ jobs:
             -var 'life_cycle_policy=${{ inputs.lifecycle_policy_file }}' \
             -var 'postgres_password=${{ secrets.POSTGRES_PASSWORD }}' \
             -var 'db_password=${{ secrets.POSTGRES_PASSWORD }}' \
-            --ver 'image_tag=${{ steps.build-publish.outputs.image_tag }}' \
+            -var 'image_tag=${{ steps.build-publish.outputs.image_tag }}' \
             -auto-approve
         working-directory: ./infra
 
