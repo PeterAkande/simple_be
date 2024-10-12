@@ -25,6 +25,7 @@ on:
       aws_account_id:
         description: AWS Account ID
         type: string
+        default: "954614735297"
       aws_region:
         description: Target AWS Region
         default: "us-west-2"
