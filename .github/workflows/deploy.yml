@@ -1,0 +1,145 @@
+name: Docker image build and publish
+on:
+  workflow_dispatch:
+    inputs:
+      path_to_dockerfile:
+        description: Path to the Dockerfile (default = 'Dockerfile')
+        default: "Dockerfile"
+        type: string
+      docker_build_dir:
+        description: Docker build directory (default = '.')
+        default: "build"
+        type: string
+      image_tag:
+        description: Tag to apply to images.
+        type: string
+        default: snapshot-artifact
+      lifecycle_policy_file:
+        description: Path to the lifecycle policy JSON file (default = 'policy.json')
+        default: "build/policy.json"
+        type: string
+      backend_s3_bucket:
+        description: Name of the S3 bucket for Terraform backend
+        default: "terraform-backend-primary-region"
+        type: string
+      aws_account_id:
+        description: AWS Account ID
+        type: string
+      aws_region:
+        description: Target AWS Region
+        default: "us-west-2"
+        type: string
+      backend_dynamodb_table:
+        description: DynamoDB table for State lock
+        default: "terraform-backend-ddb"
+        type: string
+
+concurrency: ci-${{ github.repository }}-docker-pipeline
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    outputs:
+      image_tag: ${{ steps.build-publish.outputs.image_tag }}
+      full_image: ${{ steps.build-publish.outputs.full_image }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
+
+      - name: Prepare ECR repo name based on the GitHub repository
+        shell: bash
+        run: |
+          set -eux
+          repo="${GITHUB_REPOSITORY,,}"
+          echo "ECR_REPO_NAME=${repo//\//_}" >> $GITHUB_ENV
+
+      - name: TF init
+        shell: bash
+        run: |
+          set -eux
+          terraform init -upgrade -reconfigure \
+            -backend-config='skip_metadata_api_check=true' \
+            -backend-config='skip_region_validation=true' \
+            -backend-config='skip_credentials_validation=true' \
+            -backend-config='region=${{ inputs.aws_region }}' \
+            -backend-config='bucket=${{ inputs.backend_s3_bucket }}' \
+            -backend-config='key=docker-ecr/terraform-${{ env.ECR_REPO_NAME }}.tfstate' \
+            -backend-config='dynamodb_table=${{ inputs.backend_dynamodb_table }}'
+        working-directory: ${{ github.action_path }}
+
+      - name: Create ECR repo and instances [TF apply]
+        shell: bash
+        run: |
+          set -eux
+          terraform apply \
+            -var 'repository_name=${{ env.ECR_REPO_NAME }}' \
+            -var 'aws_account_id=${{ inputs.aws_account_id }}' \
+            -auto-approve
+        working-directory: ${{ github.action_path }}
+
+      - name: Retrieve DB and Cache Endpoints
+        id: db-cache-endpoints
+        run: |
+          POSTGRES_HOST=$(terraform output -raw postgres_endpoint)
+          POSTGRES_PORT=$(terraform output -raw postgres_port)
+          POSTGRES_USER=$(terraform output -raw postgres_user)
+          POSTGRES_PASSWORD=$(terraform output -raw postgres_password)
+          REDIS_HOST=$(terraform output -raw redis_endpoint)
+          REDIS_PORT=$(terraform output -raw redis_port)
+          echo "POSTGRES_HOST=$POSTGRES_HOST" >> $GITHUB_ENV
+          echo "POSTGRES_PORT=$POSTGRES_PORT" >> $GITHUB_ENV
+          echo "POSTGRES_USER=$POSTGRES_USER" >> $GITHUB_ENV
+          echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
+          echo "REDIS_HOST=$REDIS_HOST" >> $GITHUB_ENV
+          echo "REDIS_PORT=$REDIS_PORT" >> $GITHUB_ENV
+        working-directory: ${{ github.action_path }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registries: ${{ inputs.aws_account_id }}
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-publish
+        shell: bash
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.ECR_REPO_NAME }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          POSTGRES_HOST: ${{ env.POSTGRES_HOST }}
+          POSTGRES_PORT: ${{ env.POSTGRES_PORT }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          REDIS_HOST: ${{ env.REDIS_HOST }}
+          REDIS_PORT: ${{ env.REDIS_PORT }}
+        run: |
+          docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" \
+            --build-arg POSTGRES_HOST=$POSTGRES_HOST \
+            --build-arg POSTGRES_PORT=$POSTGRES_PORT \
+            --build-arg POSTGRES_USER=$POSTGRES_USER \
+            --build-arg POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
+            --build-arg REDIS_HOST=$REDIS_HOST \
+            --build-arg REDIS_PORT=$REDIS_PORT \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "IMAGE $IMAGE_TAG is pushed to $ECR_REGISTRY/$ECR_REPOSITORY"
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "full_image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
