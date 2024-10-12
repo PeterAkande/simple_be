@@ -2,7 +2,7 @@ resource "aws_db_instance" "postgres" {
   allocated_storage      = 20
   storage_type           = "gp2"
   engine                 = "postgres"
-  engine_version         = "16.3-R2"
+  engine_version         = "15.7"
   instance_class         = "db.t2.micro"
   identifier                   = "appdb"
   username               = "postgres"
