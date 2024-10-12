@@ -82,7 +82,7 @@ jobs:
             -backend-config='bucket=${{ inputs.backend_s3_bucket }}' \
             -backend-config='key=docker-ecr/terraform-${{ env.ECR_REPO_NAME }}.tfstate' \
             -backend-config='dynamodb_table=${{ inputs.backend_dynamodb_table }}'
-        working-directory: ${{ github.action_path }}
+        working-directory: ./infra
 
       - name: Create ECR repo and instances [TF apply]
         shell: bash
@@ -92,7 +92,7 @@ jobs:
             -var 'repository_name=${{ env.ECR_REPO_NAME }}' \
             -var 'aws_account_id=${{ inputs.aws_account_id }}' \
             -auto-approve
-        working-directory: ${{ github.action_path }}
+        working-directory: ./infra
 
       - name: Retrieve DB and Cache Endpoints
         id: db-cache-endpoints
@@ -109,7 +109,7 @@ jobs:
           echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
           echo "REDIS_HOST=$REDIS_HOST" >> $GITHUB_ENV
           echo "REDIS_PORT=$REDIS_PORT" >> $GITHUB_ENV
-        working-directory: ${{ github.action_path }}
+        working-directory: ./infra
 
       - name: Login to Amazon ECR
         id: login-ecr
