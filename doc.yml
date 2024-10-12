@@ -94,6 +94,7 @@ jobs:
           terraform apply \
             -var 'repository_name=${{ env.ECR_REPO_NAME }}' \
             -var 'aws_account_id=${{ inputs.aws_account_id }}' \
+            
             -auto-approve
         working-directory: ${{ github.action_path }}
 

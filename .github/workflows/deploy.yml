@@ -91,6 +91,8 @@ jobs:
           terraform apply \
             -var 'repository_name=${{ env.ECR_REPO_NAME }}' \
             -var 'aws_account_id=${{ inputs.aws_account_id }}' \
+            -var 'aws_region=${{ inputs.aws_region }}' \
+            -var 'life_cycle_policy=${{ inputs.lifecycle_policy_file }}' \
             -auto-approve
         working-directory: ./infra
 
