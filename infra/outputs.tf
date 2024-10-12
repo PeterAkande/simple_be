@@ -33,10 +33,6 @@ output "postgres_password" {
   sensitive   = true # Marks the output as sensitive to hide it in logs.
 }
 
-output "redis_endpoint" {
-  description = "The endpoint of the Redis instance."
-  value       = aws_elasticache_cluster.redis.configuration_endpoint
-}
 
 output "redis_port" {
   description = "The port Redis is listening on."
