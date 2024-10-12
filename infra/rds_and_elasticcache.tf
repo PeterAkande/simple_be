@@ -2,7 +2,7 @@ resource "aws_db_instance" "postgres" {
   allocated_storage      = 20
   storage_type           = "gp2"
   engine                 = "postgres"
-  engine_version         = "13.4"
+  engine_version         = "16.3-R2"
   instance_class         = "db.t2.micro"
   identifier                   = "appdb"
   username               = "postgres"
@@ -17,7 +17,7 @@ resource "aws_elasticache_cluster" "redis" {
   engine               = "redis"
   node_type            = "cache.t2.micro"
   num_cache_nodes      = 1
-  parameter_group_name = "default.redis3.2"
+  parameter_group_name = "default.redis7.cluster.on"
   port                 = 6379
 
 }
