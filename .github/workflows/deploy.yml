@@ -62,6 +62,7 @@ jobs:
       - name: Create S3 bucket for Terraform state
         run: |
           aws s3api create-bucket --bucket ${{ inputs.backend_s3_bucket }} --region ${{ inputs.aws_region }} --create-bucket-configuration LocationConstraint=${{ inputs.aws_region }}|| echo "Bucket already exists"
+          aws s3api put-bucket-versioning --bucket ${{ inputs.backend_s3_bucket }} --versioning-configuration Status=Enabled
 
       - name: Create DynamoDB table for state locking
         run: |

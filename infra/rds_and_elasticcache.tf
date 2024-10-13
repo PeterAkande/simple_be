@@ -10,7 +10,7 @@ resource "aws_db_instance" "postgres" {
   publicly_accessible    = true
   vpc_security_group_ids = [aws_security_group.ecs_sg.id]
   skip_final_snapshot    = true
-
+  db_subnet_group_name   = aws_db_subnet_group.main.id # Specify subnet group
 }
 
 resource "aws_elasticache_cluster" "redis" {
@@ -21,5 +21,22 @@ resource "aws_elasticache_cluster" "redis" {
   parameter_group_name = "default.redis7"
   port                 = 6379
   security_group_ids   = [aws_security_group.ecs_sg.id]
+  subnet_group_name    = aws_elasticache_subnet_group.main.id # Specify subnet group
+}
 
+resource "aws_db_subnet_group" "main" {
+  name       = "my-db-subnet-group"
+  subnet_ids = [aws_subnet.public_subnet.id, aws_subnet.public_subnet_2.id] # Specify your subnets here
+  tags = {
+    Name = "My DB Subnet Group"
+  }
+}
+
+resource "aws_elasticache_subnet_group" "main" {
+  name       = "my-elasticache-subnet-group"
+  subnet_ids = [aws_subnet.public_subnet.id, aws_subnet.public_subnet_2.id] # Specify your subnets here
+
+  tags = {
+    Name = "My ElastiCache Subnet Group"
+  }
 }
