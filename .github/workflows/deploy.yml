@@ -126,6 +126,8 @@ jobs:
             -var 'postgres_password=${{ secrets.POSTGRES_PASSWORD }}' \
             -var 'db_password=${{ secrets.POSTGRES_PASSWORD }}' \
             -var 'image_tag=${{ inputs.image_tag }}' \
+            -var 'ecs_cluster_name=${{ inputs.ecs_cluster_name }}' \
+            -var 'app_service=${{ inputs.app_service }}' \
             -auto-approve
         working-directory: ./infra
 
