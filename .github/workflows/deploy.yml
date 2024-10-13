@@ -94,6 +94,15 @@ jobs:
           repo="${GITHUB_REPOSITORY,,}"
           echo "ECR_REPO_NAME=${repo//\//_}" >> $GITHUB_ENV
 
+      - name: Generate Image Tag
+        id: generate-tag
+        run: |
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          NEW_TAG="snapshot-${TIMESTAMP}-${COMMIT_HASH}"
+          echo "IMAGE_TAG=$NEW_TAG" >> $GITHUB_ENV
+        
+
       - name: TF init
         shell: bash
         run: |
@@ -125,7 +134,7 @@ jobs:
             -var 'life_cycle_policy=${{ inputs.lifecycle_policy_file }}' \
             -var 'postgres_password=${{ secrets.POSTGRES_PASSWORD }}' \
             -var 'db_password=${{ secrets.POSTGRES_PASSWORD }}' \
-            -var 'image_tag=${{ inputs.image_tag }}' \
+            -var 'image_tag=${{ env.IMAGE_TAG }}' \
             -var 'ecs_cluster_name=${{ inputs.ecs_cluster_name }}' \
             -var 'app_service=${{ inputs.app_service }}' \
             -auto-approve
@@ -160,7 +169,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ env.ECR_REPO_NAME }}
-          IMAGE_TAG: ${{ inputs.image_tag }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG}}
           POSTGRES_HOST: ${{ env.POSTGRES_HOST }}
           POSTGRES_PORT: ${{ env.POSTGRES_PORT }}
           POSTGRES_USER: ${{ env.POSTGRES_USER }}
