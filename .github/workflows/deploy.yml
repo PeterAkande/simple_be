@@ -20,7 +20,7 @@ on:
         type: string
       backend_s3_bucket:
         description: Name of the S3 bucket for Terraform backend
-        default: "terraform-backend-primary-region"
+        default: "terraform-backend-primary"
         type: string
       aws_account_id:
         description: AWS Account ID
