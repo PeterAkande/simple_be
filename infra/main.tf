@@ -118,7 +118,7 @@ resource "aws_route_table_association" "public_rt_2_assoc" {
 
 
 resource "aws_ecs_cluster" "app_cluster" {
-  name = "app-cluster"
+  name = var.ecs_cluster_name
 }
 
 
@@ -132,7 +132,7 @@ resource "aws_ecs_task_definition" "app_task" {
 
   container_definitions = jsonencode([{
     name  = "app-container"
-    image = "${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/app_repo:${var.image_tag}"
+    image = "${var.aws_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.repository_name}:${var.image_tag}"
     portMappings = [{
       containerPort = 8000
       hostPort      = 8000
@@ -145,7 +145,7 @@ resource "aws_ecs_task_definition" "app_task" {
 }
 
 resource "aws_ecs_service" "app_service" {
-  name            = "app-service"
+  name            = var.app_service
   cluster         = aws_ecs_cluster.app_cluster.id
   task_definition = aws_ecs_task_definition.app_task.arn
   desired_count   = 1

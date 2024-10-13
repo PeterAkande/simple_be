@@ -54,3 +54,13 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "ecs_cluster_name" {
+  description = "Name of the ECS cluster"
+  type        = string
+}
+
+variable "app_service" {
+  description = "Name of the ECS service"
+  type        = string
+}
