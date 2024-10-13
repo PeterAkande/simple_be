@@ -8,7 +8,7 @@ on:
         type: string
       docker_build_dir:
         description: Docker build directory (default = '.')
-        default: "build"
+        default: "."
         type: string
       image_tag:
         description: Tag to apply to images.
@@ -168,4 +168,3 @@ jobs:
           echo "IMAGE $IMAGE_TAG is pushed to $ECR_REGISTRY/$ECR_REPOSITORY"
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_ENV
           echo "full_image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
-        working-directory: .
