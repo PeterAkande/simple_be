@@ -24,33 +24,11 @@ resource "aws_subnet" "public_subnet_2" {
   map_public_ip_on_launch = true
 }
 
-
-
-resource "aws_security_group" "ecs_sg" {
-  vpc_id = aws_vpc.app_vpc.id
-  ingress {
-    # from_port   = 8000
-    # to_port     = 8000
-    from_port   = 0
-    to_port     = 0
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
 resource "aws_lb" "app_alb" {
   name               = "app-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.ecs_sg.id]
+  security_groups    = [aws_security_group.load_balancer_sg.id]
   subnets            = [aws_subnet.public_subnet.id, aws_subnet.public_subnet_2.id]
 }
 
