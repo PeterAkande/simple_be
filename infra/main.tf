@@ -1,8 +1,12 @@
 resource "aws_vpc" "app_vpc" {
   cidr_block = "10.0.0.0/16"
 
-  enable_dns_support = true
+  enable_dns_support   = true
   enable_dns_hostnames = true
+
+  tags = {
+    Name = "MyAppVPC"
+  }
 }
 
 // Create a public subnet
@@ -55,7 +59,18 @@ resource "aws_lb_target_group" "app_tg" {
   port     = 80
   protocol = "HTTP"
   vpc_id   = aws_vpc.app_vpc.id
+
+  target_type = "ip" # Set target type to IP
+
+  health_check {
+    path                = "/docs"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
 }
+
 
 resource "aws_lb_listener" "app_listener" {
   load_balancer_arn = aws_lb.app_alb.arn
