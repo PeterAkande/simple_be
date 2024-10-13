@@ -130,7 +130,7 @@ resource "aws_ecs_service" "app_service" {
   launch_type     = "FARGATE"
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id]
-    security_groups  = [aws_security_group.ecs_sg.id]
+    security_groups  = [aws_security_group.ecs_instances_sg.id]
     assign_public_ip = true
   }
   load_balancer {
