@@ -177,7 +177,7 @@ jobs:
             --build-arg POSTGRES_PORT=$POSTGRES_PORT \
             --build-arg POSTGRES_USER=$POSTGRES_USER \
             --build-arg POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
-            --build-arg DATABASE_NAME=$DATABASE_NAME \
+            --build-arg DATABASE_NAME=${{inputs.database_name}} \
             --build-arg REDIS_HOST=$REDIS_HOST \
             --build-arg REDIS_PORT=$REDIS_PORT \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
