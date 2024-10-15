@@ -146,10 +146,9 @@ jobs:
 
       - name: Create PostgreSQL Database
         run: |
-          psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -p ${{ env.POSTGRES_PORT }} \
-          -c "CREATE DATABASE ${{ inputs.database_name }};" || echo "Database already exists"
-        env:
-          PGPASSFILE: ~/.pgpass
+          CONNECTION_STRING="postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }}/postgres"
+          psql "$CONNECTION_STRING" -c "CREATE DATABASE ${{ inputs.database_name }};" || echo "Database already exists"
+
 
       - name: Login to Amazon ECR
         id: login-ecr
