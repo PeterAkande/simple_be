@@ -10,10 +10,6 @@ on:
         description: Docker build directory (default = '.')
         default: "."
         type: string
-      image_tag:
-        description: Tag to apply to images.
-        type: string
-        default: latest
       lifecycle_policy_file:
         description: Path to the lifecycle policy JSON file (default = 'policy.json')
         default: "../build/policy.json"
