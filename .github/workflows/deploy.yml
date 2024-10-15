@@ -141,7 +141,7 @@ jobs:
 
       - name: Create PostgreSQL Database
         run: |
-          psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -p ${{ env.POSTGRES_PORT }} - \
+          psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -p ${{ env.POSTGRES_PORT }} \
           -c "CREATE DATABASE ${{ inputs.database_name }};" || echo "Database already exists"
 
         env:
