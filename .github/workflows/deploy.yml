@@ -172,10 +172,11 @@ jobs:
         run: |
           # Parse .env file, ignore lines without `=` and lines with empty values
           build_args=$(grep -vE '^#|^$' .env | awk -F '=' '$1 && $2 {print "--build-arg " $1 "=" $2}' | xargs)
+
+          echo "Build Args: $build_args"
           
           # Build the Docker image with parsed environment variables
-          docker build "${{ inputs.docker_build_dir }}" \
-            -f "${{ inputs.path_to_dockerfile }}" \
+          docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" \
             $build_args \
             --build-arg POSTGRES_HOST=$POSTGRES_HOST \
             --build-arg POSTGRES_PORT=$POSTGRES_PORT \
