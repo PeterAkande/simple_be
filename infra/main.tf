@@ -119,6 +119,15 @@ resource "aws_ecs_task_definition" "app_task" {
       { name = "POSTGRES_URL", value = aws_db_instance.postgres.endpoint },
       { name = "REDIS_URL", value = aws_elasticache_cluster.redis.cache_nodes[0].address }
     ]
+    logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          awslogs-create-group  = "true",
+          awslogs-group         = "awslogs/app-task",
+          awslogs-region        = var.aws_region,
+          awslogs-stream-prefix = "ecs"
+        }
+      },
   }])
 }
 

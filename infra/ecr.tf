@@ -8,6 +8,8 @@ resource "aws_ecr_repository" "simble_be" {
   encryption_configuration {
     encryption_type = "KMS"
   }
+
+
 }
 
 resource "aws_ecr_lifecycle_policy" "example" {
