@@ -139,10 +139,17 @@ jobs:
           echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
         working-directory: ./infra
 
+      - name: Create .pgpass file for PostgreSQL Connection
+        run: |
+          echo "${{ env.POSTGRES_HOST }}:${{ env.POSTGRES_PORT }}:*:${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}" > ~/.pgpass
+          chmod 600 ~/.pgpass  # Set the correct permissions to secure the .pgpass file
+
       - name: Create PostgreSQL Database
         run: |
-          PGPASSWORD=${{ env.POSTGRES_PASSWORD }} psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -p ${{ env.POSTGRES_PORT }} - \
+          psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -p ${{ env.POSTGRES_PORT }} \
           -c "CREATE DATABASE ${{ inputs.database_name }};" || echo "Database already exists"
+        env:
+          PGPASSFILE: ~/.pgpass
 
       - name: Login to Amazon ECR
         id: login-ecr
