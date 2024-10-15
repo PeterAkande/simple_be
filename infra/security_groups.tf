@@ -84,6 +84,7 @@ resource "aws_vpc_security_group_ingress_rule" "allow_tls_ipv4_rds" {
   to_port           = 5432
 
   # referenced_security_group_id = aws_security_group.ecs_instances_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 
@@ -109,4 +110,5 @@ resource "aws_vpc_security_group_ingress_rule" "allow_tls_ipv4_elasticache" {
   to_port           = 6379
 
   # referenced_security_group_id = aws_security_group.ecs_instances_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
 }
