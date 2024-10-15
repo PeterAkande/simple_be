@@ -170,11 +170,12 @@ jobs:
           REDIS_HOST: ${{ env.REDIS_HOST }}
           REDIS_PORT: ${{ env.REDIS_PORT }}
         run: |
-          # Parse .env file and prepare build arguments
-          build_args=$(for i in $(grep -vE '^#|^$' .env); do echo "--build-arg $i"; done | xargs)
-
+          # Parse .env file, ignore lines without `=` and lines with empty values
+          build_args=$(grep -vE '^#|^$' .env | awk -F '=' '$1 && $2 {print "--build-arg " $1 "=" $2}' | xargs)
+          
           # Build the Docker image with parsed environment variables
-          docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" \
+          docker build "${{ inputs.docker_build_dir }}" \
+            -f "${{ inputs.path_to_dockerfile }}" \
             $build_args \
             --build-arg POSTGRES_HOST=$POSTGRES_HOST \
             --build-arg POSTGRES_PORT=$POSTGRES_PORT \
