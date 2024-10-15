@@ -156,6 +156,66 @@ jobs:
       - name: Create .env file for Docker Build
         run: echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
 
+      - name: Write Docker Build Script
+        run: |
+          cat << 'EOF' > docker-build.sh
+          #!/bin/bash
+          set -e
+
+          # Check arguments
+          if [ $# -ne 6 ]; then
+            echo "Usage: $0 <docker_build_dir> <path_to_dockerfile> <aws_account_id> <aws_region> <ecr_repository> <image_tag>"
+            exit 1
+          fi
+
+          # Assign variables
+          DOCKER_BUILD_DIR=$1
+          DOCKERFILE_PATH=$2
+          AWS_ACCOUNT_ID=$3
+          AWS_REGION=$4
+          ECR_REPOSITORY=$5
+          IMAGE_TAG=$6
+
+          # Set ECR registry URL
+          ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+          # Load .env file and parse as Docker build arguments
+          BUILD_ARGS=""
+          if [ -f .env ]; then
+            while IFS= read -r line; do
+              if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
+                var_name="${line%%=*}"
+                var_value="${line#*=}"
+                BUILD_ARGS+=" --build-arg $var_name=$var_value"
+              fi
+            done < .env
+          fi
+
+          # Login to ECR
+          echo "Logging into Amazon ECR..."
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+          # Build and push Docker image
+          echo "Building Docker image..."
+          docker buildx build "$DOCKER_BUILD_DIR" \
+            -f "$DOCKERFILE_PATH" \
+            $BUILD_ARGS \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
+            --push
+
+          echo "Docker image $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG built and pushed successfully."
+          EOF
+
+      - name: Make Docker Build Script Executable
+        run: chmod +x docker-build.sh
+
+      - name: Execute Docker Build Script
+        shell: bash
+        run: |
+          ./docker-build.sh "${{ inputs.docker_build_dir }}" "${{ inputs.path_to_dockerfile }}" \
+          "${{ inputs.aws_account_id }}" "${{ inputs.aws_region }}" \
+          "${{ env.ECR_REPO_NAME }}" "${{ env.IMAGE_TAG }}"
+
       - name: Build, tag, and push image to Amazon ECR
         id: build-publish
         shell: bash
@@ -174,7 +234,7 @@ jobs:
           build_args=$(grep -vE '^#|^$' .env | awk -F '=' '$1 && $2 {print "--build-arg " $1 "=" $2}' | xargs)
 
           echo "Build Args: $build_args"
-          
+
           # Build the Docker image with parsed environment variables
           docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" \
             $(for i in $(grep -vE '^#|^$' .env); do out+="--build-arg $i " ; done; echo $out;out="") \
