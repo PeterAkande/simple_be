@@ -98,12 +98,6 @@ jobs:
         shell: bash
         run: |
           set -eux
-          terraform init -upgrade -reconfigure
-
-      - name: TF init
-        shell: bash
-        run: |
-          set -eux
           terraform init -upgrade -reconfigure \
             -backend-config='skip_metadata_api_check=true' \
             -backend-config='skip_region_validation=true' \
@@ -114,7 +108,7 @@ jobs:
             -backend-config='dynamodb_table=${{ inputs.backend_dynamodb_table }}'
         working-directory: ./infra
 
-      - name: Create ECR repo and instances [TF apply]
+      - name: Destroy resources [Tf destroy]
         shell: bash
         run: |
           set -eux

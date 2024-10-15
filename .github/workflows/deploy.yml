@@ -34,16 +34,19 @@ on:
         description: DynamoDB table for State lock
         default: "terraform-backend-ddb"
         type: string
-
       ecs_cluster_name:
         description: ECS Cluster Name
         default: "app_cluster"
         type: string
-
       app_service:
         description: ECS Service Name
         default: "app-service"
         type: string
+      database_name:
+        description: Name of the database to create
+        default: "ai_camera_log"
+        type: string
+        required: true
 
 concurrency: ci-${{ github.repository }}-docker-pipeline
 
@@ -54,10 +57,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
-    outputs:
-      image_tag: ${{ steps.build-publish.outputs.image_tag }}
-      full_image: ${{ steps.build-publish.outputs.full_image }}
 
     steps:
       - uses: actions/checkout@v3
@@ -71,7 +70,7 @@ jobs:
 
       - name: Create S3 bucket for Terraform state
         run: |
-          aws s3api create-bucket --bucket ${{ inputs.backend_s3_bucket }} --region ${{ inputs.aws_region }} --create-bucket-configuration LocationConstraint=${{ inputs.aws_region }}|| echo "Bucket already exists"
+          aws s3api create-bucket --bucket ${{ inputs.backend_s3_bucket }} --region ${{ inputs.aws_region }} --create-bucket-configuration LocationConstraint=${{ inputs.aws_region }} || echo "Bucket already exists"
           aws s3api put-bucket-versioning --bucket ${{ inputs.backend_s3_bucket }} --versioning-configuration Status=Enabled || echo "Versioning already enabled"
 
       - name: Create DynamoDB table for state locking
@@ -101,23 +100,18 @@ jobs:
           COMMIT_HASH=$(git rev-parse --short HEAD)
           NEW_TAG="snapshot-${TIMESTAMP}-${COMMIT_HASH}"
           echo "IMAGE_TAG=$NEW_TAG" >> $GITHUB_ENV
-        
 
-      - name: TF init
+      - name: Terraform Init
         shell: bash
         run: |
-          set -eux
           terraform init -upgrade -reconfigure \
-            -backend-config='skip_metadata_api_check=true' \
-            -backend-config='skip_region_validation=true' \
-            -backend-config='skip_credentials_validation=true' \
             -backend-config='region=${{ inputs.aws_region }}' \
             -backend-config='bucket=${{ inputs.backend_s3_bucket }}' \
             -backend-config='key=docker-ecr/terraform-${{ env.ECR_REPO_NAME }}.tfstate' \
             -backend-config='dynamodb_table=${{ inputs.backend_dynamodb_table }}'
         working-directory: ./infra
 
-      - name: Create ECR repo and instances [TF apply]
+      - name: Terraform Apply
         shell: bash
         run: |
           set -eux
@@ -147,9 +141,12 @@ jobs:
           echo "POSTGRES_PORT=$POSTGRES_PORT" >> $GITHUB_ENV
           echo "POSTGRES_USER=$POSTGRES_USER" >> $GITHUB_ENV
           echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
-          echo "REDIS_HOST=$REDIS_HOST" >> $GITHUB_ENV
-          echo "REDIS_PORT=$REDIS_PORT" >> $GITHUB_ENV
         working-directory: ./infra
+
+      - name: Create PostgreSQL Database
+        run: |
+          psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -p ${{ env.POSTGRES_PORT }} \
+          -c "CREATE DATABASE ${{ inputs.database_name }};" || echo "Database already exists"
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -157,13 +154,16 @@ jobs:
         with:
           registries: ${{ inputs.aws_account_id }}
 
+      - name: Create .env file for Docker Build
+        run: echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
       - name: Build, tag, and push image to Amazon ECR
         id: build-publish
         shell: bash
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ env.ECR_REPO_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG}}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
           POSTGRES_HOST: ${{ env.POSTGRES_HOST }}
           POSTGRES_PORT: ${{ env.POSTGRES_PORT }}
           POSTGRES_USER: ${{ env.POSTGRES_USER }}
@@ -172,10 +172,12 @@ jobs:
           REDIS_PORT: ${{ env.REDIS_PORT }}
         run: |
           docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" \
+            --env-file .env \
             --build-arg POSTGRES_HOST=$POSTGRES_HOST \
             --build-arg POSTGRES_PORT=$POSTGRES_PORT \
             --build-arg POSTGRES_USER=$POSTGRES_USER \
             --build-arg POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
+            --build-arg DATABASE_NAME=$DATABASE_NAME \
             --build-arg REDIS_HOST=$REDIS_HOST \
             --build-arg REDIS_PORT=$REDIS_PORT \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
@@ -187,7 +189,7 @@ jobs:
       - name: Update ECS Service with New Image
         run: |
           aws ecs update-service \
-            --cluster ${{ inputs.ecs_cluster_name }}\
+            --cluster ${{ inputs.ecs_cluster_name }} \
             --service ${{ inputs.app_service }} \
             --force-new-deployment
         env:
