@@ -141,7 +141,7 @@ jobs:
 
       - name: Create PostgreSQL Database
         run: |
-          psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -p ${{ env.POSTGRES_PORT }} \
+          PGPASSWORD=${{ env.POSTGRES_PASSWORD }} psql -h ${{ env.POSTGRES_HOST }} -U ${{ env.POSTGRES_USER }} -p ${{ env.POSTGRES_PORT }} - \
           -c "CREATE DATABASE ${{ inputs.database_name }};" || echo "Database already exists"
 
       - name: Login to Amazon ECR
@@ -167,17 +167,25 @@ jobs:
           REDIS_HOST: ${{ env.REDIS_HOST }}
           REDIS_PORT: ${{ env.REDIS_PORT }}
         run: |
+          # Parse .env file and prepare build arguments
+          build_args=$(for i in $(grep -vE '^#|^$' .env); do echo "--build-arg $i"; done | xargs)
+
+          # Build the Docker image with parsed environment variables
           docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" \
-            --env-file .env \
+            $build_args \
             --build-arg POSTGRES_HOST=$POSTGRES_HOST \
             --build-arg POSTGRES_PORT=$POSTGRES_PORT \
             --build-arg POSTGRES_USER=$POSTGRES_USER \
             --build-arg POSTGRES_PASSWORD=$POSTGRES_PASSWORD \
-            --build-arg DATABASE_NAME=${{inputs.database_name}} \
+            --build-arg DATABASE_NAME=${{ inputs.database_name }} \
             --build-arg REDIS_HOST=$REDIS_HOST \
             --build-arg REDIS_PORT=$REDIS_PORT \
             -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          # Push the Docker image to ECR
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          # Set output variables
           echo "IMAGE $IMAGE_TAG is pushed to $ECR_REGISTRY/$ECR_REPOSITORY"
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_ENV
           echo "full_image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
