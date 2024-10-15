@@ -216,38 +216,6 @@ jobs:
           "${{ inputs.aws_account_id }}" "${{ inputs.aws_region }}" \
           "${{ env.ECR_REPO_NAME }}" "${{ env.IMAGE_TAG }}"
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-publish
-        shell: bash
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ env.ECR_REPO_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          POSTGRES_HOST: ${{ env.POSTGRES_HOST }}
-          POSTGRES_PORT: ${{ env.POSTGRES_PORT }}
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          REDIS_HOST: ${{ env.REDIS_HOST }}
-          REDIS_PORT: ${{ env.REDIS_PORT }}
-        run: |
-          # Parse .env file, ignore lines without `=` and lines with empty values
-          build_args=$(grep -vE '^#|^$' .env | awk -F '=' '$1 && $2 {print "--build-arg " $1 "=" $2}' | xargs)
-
-          echo "Build Args: $build_args"
-
-          # Build the Docker image with parsed environment variables
-          docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" \
-            $(for i in $(grep -vE '^#|^$' .env); do out+="--build-arg $i " ; done; echo $out;out="") \
-            
-            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-          # Push the Docker image to ECR
-          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-          # Set output variables
-          echo "IMAGE $IMAGE_TAG is pushed to $ECR_REGISTRY/$ECR_REPOSITORY"
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_ENV
-          echo "full_image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Update ECS Service with New Image
         run: |

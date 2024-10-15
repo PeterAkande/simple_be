@@ -10,6 +10,8 @@ RUN ls
 # Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN python -c "import os; print(os.environ)"
+
 # Expose the port
 EXPOSE 8000
 
